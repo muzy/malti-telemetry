@@ -12,7 +12,7 @@ requires-python = ">=3.11"
 maintainers = [
     {name = "smuzy", email = "malti@muzy.dev"}
 ]
-keywords = ["telemetry", "monitoring", "fastapi", "analytics", "api", "self-hosted", "starlette]
+keywords = ["telemetry", "monitoring", "fastapi", "analytics", "api", "self-hosted", "starlette"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",

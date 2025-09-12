@@ -1,10 +1,6 @@
 name: Publish Python Package to PyPI
 
 on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
   release:
     types: [published]
 

@@ -420,11 +420,13 @@ class TestBatchSenderAsync:
 
     @pytest.mark.asyncio
     async def test_send_batch_failure(self):
-        """Test batch sending failure and retry"""
+        """Test batch sending failure and skip retries"""
         os.environ["MALTI_API_KEY"] = "test-key"
 
         try:
             sender = BatchSender()
+            # Disable retries to make test fast (exponential backoff with retries takes ~155 seconds)
+            sender.max_retries = 0
             await sender.start()
 
             # Create test records

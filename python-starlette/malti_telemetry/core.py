@@ -121,10 +121,10 @@ class BatchSender:
         self.batch_size = int(os.getenv("MALTI_BATCH_SIZE", "500"))
         self.batch_interval = float(os.getenv("MALTI_BATCH_INTERVAL", "60.0"))
         self.max_retries = int(os.getenv("MALTI_MAX_RETRIES", "3"))
-        self.retry_delay = float(os.getenv("MALTI_RETRY_DELAY", "1.0"))
+        self.retry_delay = float(os.getenv("MALTI_RETRY_DELAY", "5.0"))
 
         # HTTP client configuration
-        self.http_timeout = float(os.getenv("MALTI_HTTP_TIMEOUT", "30.0"))
+        self.http_timeout = float(os.getenv("MALTI_HTTP_TIMEOUT", "15.0"))
         max_keepalive = os.getenv("MALTI_MAX_KEEPALIVE_CONNECTIONS", "5")
         self.max_keepalive_connections = int(max_keepalive)
         max_conn = os.getenv("MALTI_MAX_CONNECTIONS", "10")
@@ -285,7 +285,7 @@ class BatchSender:
                 logger.warning(f"Attempt {attempt + 1} failed to send batch: {e}")
 
                 if attempt < self.max_retries:
-                    delay = self.retry_delay * (2**attempt)  # Exponential backoff
+                    delay = self.retry_delay * (5**attempt)  # Exponential backoff
                     await asyncio.sleep(delay)
                 else:
                     max_attempts = self.max_retries + 1

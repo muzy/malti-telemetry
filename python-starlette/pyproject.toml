@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "malti-telemetry"
-version = "1.0.0"
+version = "1.0.1"
 description = "A Python library for collecting and sending telemetry data to Malti server"
 readme = "README.md"
 license = "MIT"
@@ -12,15 +12,12 @@ requires-python = ">=3.11"
 maintainers = [
     {name = "smuzy", email = "malti@muzy.dev"}
 ]
-keywords = ["telemetry", "monitoring", "fastapi", "analytics", "api", "self-hosted"]
+keywords = ["telemetry", "monitoring", "fastapi", "analytics", "api", "self-hosted", "starlette]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Framework :: FastAPI",

@@ -1,0 +1,12 @@
+name: "Malti Telemetry"
+description: "Quarkus extension for Malti telemetry integration"
+metadata:
+  keywords:
+    - "telemetry"
+    - "monitoring"
+    - "malti"
+  guide: ""
+  categories:
+    - "observability"
+  status: "preview"
+  built-with-quarkus-core: "3.26.3"

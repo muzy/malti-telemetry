@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "malti-telemetry"
-version = "1.0.2"
+version = "1.0.3"
 description = "A Python library for collecting and sending telemetry data to Malti server"
 readme = "README.md"
 license = "MIT"

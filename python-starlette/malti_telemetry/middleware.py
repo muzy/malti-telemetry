@@ -95,19 +95,19 @@ class MaltiMiddleware:
 
             status = response_status
 
-            # Extract route pattern after request processing
-            endpoint = self._extract_route_pattern(request)
-
-            # Extract context information
-            context = self._extract_context(request)
-
-            # Extract consumer information
-            consumer = self._extract_consumer(request)
-
             response_time = int((time.time() - start_time) * 1000)
 
             # Skip recording if in clean mode and status is 401 or 404
-            if not telemetry_system.batch_sender.should_ignore_status(status):
+            if not telemetry_system.batch_sender.should_ignore_status(status) \
+                and telemetry_system.batch_sender.has_api_key():
+
+                 # Extract route pattern after request processing
+                endpoint = self._extract_route_pattern(request)
+                # Extract context information
+                context = self._extract_context(request)
+                # Extract consumer information
+                consumer = self._extract_consumer(request)
+
                 try:
                     # Record the request (thread-safe, non-blocking)
                     telemetry_system.record_request(
@@ -123,20 +123,23 @@ class MaltiMiddleware:
 
         except Exception:
             try:
-                response_time = int((time.time() - start_time) * 1000)
-                endpoint = self._extract_route_pattern(request)
-                context = self._extract_context(request)
-                consumer = self._extract_consumer(request)
+                if not telemetry_system.batch_sender.should_ignore_status(status) \
+                    and telemetry_system.batch_sender.has_api_key():
+                    
+                    response_time = int((time.time() - start_time) * 1000)
+                    endpoint = self._extract_route_pattern(request)
+                    context = self._extract_context(request)
+                    consumer = self._extract_consumer(request)
 
-                # Record the request (thread-safe, non-blocking)
-                telemetry_system.record_request(
-                    method=method,
-                    endpoint=endpoint,
-                    status=status,
-                    response_time=response_time,
-                    consumer=consumer,
-                    context=context,
-                )
+                    # Record the request (thread-safe, non-blocking)
+                    telemetry_system.record_request(
+                        method=method,
+                        endpoint=endpoint,
+                        status=status,
+                        response_time=response_time,
+                        consumer=consumer,
+                        context=context,
+                    )
             except Exception as e:
                 logger.debug(f"Failed to record telemetry on error: {e}")
 

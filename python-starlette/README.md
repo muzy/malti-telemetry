@@ -114,7 +114,7 @@ Set these environment variables before starting your application:
 ```bash
 export MALTI_API_KEY="your-api-key-here"
 export MALTI_SERVICE_NAME="my-fastapi-app"
-export MALTI_URL="https://your-malti-server.com"
+export MALTI_URL="https://your-malti-server.muzy.dev"
 export MALTI_NODE="production-node-1"
 ```
 
@@ -146,7 +146,7 @@ from malti_telemetry import configure_malti
 configure_malti(
     service_name="my-service",
     api_key="your-api-key",
-    malti_url="https://api.malti.dev",
+    malti_url="https://api.malti.muzy.dev",
     node="prod-web-01",
     batch_size=1000,
     clean_mode=True
@@ -228,8 +228,8 @@ app.routes = [
 
 Malti automatically extracts consumer information from headers:
 
-1. `x-consumer-id` header (highest priority)
-2. `x-user-id` header (fallback)
+1. `x-consumer-id` header 
+2. `x-user-id` header 
 3. `consumer-id` header
 4. `user-id` header
 

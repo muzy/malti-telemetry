@@ -217,6 +217,10 @@ class BatchSender:
             logger.warning(f"Buffer at {buffer_size}/{max_size} records - " "sending immediately to prevent overflow")
             asyncio.create_task(self._send_overflow_batch())
 
+    def has_api_key(self) -> bool:
+        """Check if the API key is set"""
+        return self.api_key is not None and self.api_key != ""
+
     async def _send_overflow_batch(self) -> None:
         """Send batches immediately when buffer reaches overflow threshold"""
         async with self._send_lock:

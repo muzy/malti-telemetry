@@ -45,7 +45,12 @@ public class TelemetryService {
         if (shouldIgnoreStatus(status)) {
             return;
         }
-        
+
+        if (config.apiKey().isEmpty()) {
+            Log.warn("No API key configured, skipping telemetry record");
+            return;
+        }
+
         TelemetryRecord record = new TelemetryRecord(
             config.serviceName(),
             method,

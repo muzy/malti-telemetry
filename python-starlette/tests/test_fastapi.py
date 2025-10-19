@@ -518,3 +518,341 @@ class TestLifespan:
 
         # No telemetry should be recorded for non-HTTP requests
         # This test mainly verifies the middleware doesn't crash
+
+
+class TestIPConsumerExtraction:
+    """Test IP address consumer extraction functionality"""
+
+    @pytest.mark.asyncio
+    async def test_ip_consumer_extraction_disabled(self):
+        """Test that IP extraction is disabled by default"""
+        # Mock ASGI app
+        async def mock_app(scope, receive, send):
+            await send({
+                "type": "http.response.start",
+                "status": 200,
+                "headers": [(b"content-type", b"application/json")]
+            })
+            await send({
+                "type": "http.response.body",
+                "body": b'{"message": "success"}'
+            })
+
+        # Create middleware instance
+        middleware = MaltiMiddleware(mock_app)
+
+        # Mock HTTP scope with X-Forwarded-For but no consumer headers
+        scope = {
+            "type": "http",
+            "method": "GET",
+            "path": "/api/test",
+            "headers": [(b"x-forwarded-for", b"192.168.1.100")],
+            "state": {}
+        }
+
+        sent_messages = []
+
+        async def mock_receive():
+            return {"type": "http.request", "body": b"", "more_body": False}
+
+        async def mock_send(message):
+            sent_messages.append(message)
+
+        with patch("malti_telemetry.middleware.get_telemetry_system") as mock_get_system:
+            mock_system = Mock()
+            mock_batch_sender = Mock()
+            mock_batch_sender.should_ignore_status.return_value = False
+            mock_batch_sender.has_api_key.return_value = True
+            mock_batch_sender.use_ip_as_consumer = False  # Disabled
+            mock_batch_sender.ip_anonymize = False
+            mock_system.batch_sender = mock_batch_sender
+            mock_get_system.return_value = mock_system
+
+            await middleware(scope, mock_receive, mock_send)
+
+            # Verify consumer was not extracted from IP (should be anonymous)
+            mock_system.record_request.assert_called_once()
+            args = mock_system.record_request.call_args[1]
+            assert args["consumer"] == "anonymous"
+
+    @pytest.mark.asyncio
+    async def test_ip_consumer_extraction_from_forwarded_for(self):
+        """Test IP extraction from X-Forwarded-For header"""
+        # Mock ASGI app
+        async def mock_app(scope, receive, send):
+            await send({
+                "type": "http.response.start",
+                "status": 200,
+                "headers": [(b"content-type", b"application/json")]
+            })
+            await send({
+                "type": "http.response.body",
+                "body": b'{"message": "success"}'
+            })
+
+        # Create middleware instance
+        middleware = MaltiMiddleware(mock_app)
+
+        # Mock HTTP scope with X-Forwarded-For but no consumer headers
+        scope = {
+            "type": "http",
+            "method": "GET",
+            "path": "/api/test",
+            "headers": [(b"x-forwarded-for", b"192.168.1.100, 10.0.0.1")],
+            "state": {}
+        }
+
+        sent_messages = []
+
+        async def mock_receive():
+            return {"type": "http.request", "body": b"", "more_body": False}
+
+        async def mock_send(message):
+            sent_messages.append(message)
+
+        with patch("malti_telemetry.middleware.get_telemetry_system") as mock_get_system:
+            mock_system = Mock()
+            mock_batch_sender = Mock()
+            mock_batch_sender.should_ignore_status.return_value = False
+            mock_batch_sender.has_api_key.return_value = True
+            mock_batch_sender.use_ip_as_consumer = True  # Enabled
+            mock_batch_sender.ip_anonymize = False
+            mock_system.batch_sender = mock_batch_sender
+            mock_get_system.return_value = mock_system
+
+            await middleware(scope, mock_receive, mock_send)
+
+            # Verify consumer was extracted from first IP
+            mock_system.record_request.assert_called_once()
+            args = mock_system.record_request.call_args[1]
+            assert args["consumer"] == "192.168.1.100"
+
+    @pytest.mark.asyncio
+    async def test_ip_consumer_extraction_with_anonymization(self):
+        """Test IP extraction with anonymization enabled"""
+        # Mock ASGI app
+        async def mock_app(scope, receive, send):
+            await send({
+                "type": "http.response.start",
+                "status": 200,
+                "headers": [(b"content-type", b"application/json")]
+            })
+            await send({
+                "type": "http.response.body",
+                "body": b'{"message": "success"}'
+            })
+
+        # Create middleware instance
+        middleware = MaltiMiddleware(mock_app)
+
+        # Mock HTTP scope with X-Forwarded-For but no consumer headers
+        scope = {
+            "type": "http",
+            "method": "GET",
+            "path": "/api/test",
+            "headers": [(b"x-forwarded-for", b"192.168.1.100")],
+            "state": {}
+        }
+
+        sent_messages = []
+
+        async def mock_receive():
+            return {"type": "http.request", "body": b"", "more_body": False}
+
+        async def mock_send(message):
+            sent_messages.append(message)
+
+        with patch("malti_telemetry.middleware.get_telemetry_system") as mock_get_system:
+            mock_system = Mock()
+            mock_batch_sender = Mock()
+            mock_batch_sender.should_ignore_status.return_value = False
+            mock_batch_sender.has_api_key.return_value = True
+            mock_batch_sender.use_ip_as_consumer = True  # Enabled
+            mock_batch_sender.ip_anonymize = True  # Anonymization enabled
+            mock_system.batch_sender = mock_batch_sender
+            mock_get_system.return_value = mock_system
+
+            await middleware(scope, mock_receive, mock_send)
+
+            # Verify consumer was extracted and anonymized
+            mock_system.record_request.assert_called_once()
+            args = mock_system.record_request.call_args[1]
+            assert args["consumer"] == "192.168.1.xxx"
+
+    @pytest.mark.asyncio
+    async def test_ip_consumer_extraction_fallback_to_client_ip(self):
+        """Test fallback to client IP when X-Forwarded-For is not available"""
+        # Mock ASGI app
+        async def mock_app(scope, receive, send):
+            await send({
+                "type": "http.response.start",
+                "status": 200,
+                "headers": [(b"content-type", b"application/json")]
+            })
+            await send({
+                "type": "http.response.body",
+                "body": b'{"message": "success"}'
+            })
+
+        # Create middleware instance
+        middleware = MaltiMiddleware(mock_app)
+
+        # Mock HTTP scope without X-Forwarded-For but with client info
+        scope = {
+            "type": "http",
+            "method": "GET",
+            "path": "/api/test",
+            "headers": [],
+            "state": {},
+            "client": ("203.0.113.42", 12345)  # Client IP and port
+        }
+
+        sent_messages = []
+
+        async def mock_receive():
+            return {"type": "http.request", "body": b"", "more_body": False}
+
+        async def mock_send(message):
+            sent_messages.append(message)
+
+        # Mock request with client attribute
+        mock_request = Mock()
+        mock_request.headers = {}
+        mock_client = Mock()
+        mock_client.host = "203.0.113.42"
+        mock_request.client = mock_client
+        # Mock the state attribute to not have malti_consumer
+        mock_request.state = Mock(spec=[])  # Empty spec means no attributes
+        # Mock the scope attribute
+        mock_request.scope = {"state": {}}  # Empty state dict
+        # Mock URL for route pattern extraction
+        mock_url = Mock()
+        mock_url.path = "/api/test"
+        mock_request.url = mock_url
+        mock_request.method = "GET"
+
+        with patch("malti_telemetry.middleware.get_telemetry_system") as mock_get_system, \
+             patch.object(middleware, '_create_request', return_value=mock_request):
+            
+            mock_system = Mock()
+            mock_batch_sender = Mock()
+            mock_batch_sender.should_ignore_status.return_value = False
+            mock_batch_sender.has_api_key.return_value = True
+            mock_batch_sender.use_ip_as_consumer = True  # Enabled
+            mock_batch_sender.ip_anonymize = True  # Anonymization enabled
+            mock_system.batch_sender = mock_batch_sender
+            mock_get_system.return_value = mock_system
+
+            await middleware(scope, mock_receive, mock_send)
+
+            # Verify consumer was extracted from client IP and anonymized
+            mock_system.record_request.assert_called_once()
+            args = mock_system.record_request.call_args[1]
+            assert args["consumer"] == "203.0.113.xxx"
+
+    @pytest.mark.asyncio
+    async def test_ip_consumer_extraction_consumer_header_takes_priority(self):
+        """Test that consumer headers take priority over IP extraction"""
+        # Mock ASGI app
+        async def mock_app(scope, receive, send):
+            await send({
+                "type": "http.response.start",
+                "status": 200,
+                "headers": [(b"content-type", b"application/json")]
+            })
+            await send({
+                "type": "http.response.body",
+                "body": b'{"message": "success"}'
+            })
+
+        # Create middleware instance
+        middleware = MaltiMiddleware(mock_app)
+
+        # Mock HTTP scope with both consumer header and X-Forwarded-For
+        scope = {
+            "type": "http",
+            "method": "GET",
+            "path": "/api/test",
+            "headers": [
+                (b"x-consumer-id", b"header-consumer"),
+                (b"x-forwarded-for", b"192.168.1.100")
+            ],
+            "state": {}
+        }
+
+        sent_messages = []
+
+        async def mock_receive():
+            return {"type": "http.request", "body": b"", "more_body": False}
+
+        async def mock_send(message):
+            sent_messages.append(message)
+
+        with patch("malti_telemetry.middleware.get_telemetry_system") as mock_get_system:
+            mock_system = Mock()
+            mock_batch_sender = Mock()
+            mock_batch_sender.should_ignore_status.return_value = False
+            mock_batch_sender.has_api_key.return_value = True
+            mock_batch_sender.use_ip_as_consumer = True  # Enabled
+            mock_batch_sender.ip_anonymize = True
+            mock_system.batch_sender = mock_batch_sender
+            mock_get_system.return_value = mock_system
+
+            await middleware(scope, mock_receive, mock_send)
+
+            # Verify consumer header takes priority over IP
+            mock_system.record_request.assert_called_once()
+            args = mock_system.record_request.call_args[1]
+            assert args["consumer"] == "header-consumer"
+
+    @pytest.mark.asyncio
+    async def test_ip_consumer_extraction_invalid_forwarded_for(self):
+        """Test handling of invalid X-Forwarded-For header"""
+        # Mock ASGI app
+        async def mock_app(scope, receive, send):
+            await send({
+                "type": "http.response.start",
+                "status": 200,
+                "headers": [(b"content-type", b"application/json")]
+            })
+            await send({
+                "type": "http.response.body",
+                "body": b'{"message": "success"}'
+            })
+
+        # Create middleware instance
+        middleware = MaltiMiddleware(mock_app)
+
+        # Mock HTTP scope with invalid X-Forwarded-For
+        scope = {
+            "type": "http",
+            "method": "GET",
+            "path": "/api/test",
+            "headers": [(b"x-forwarded-for", b"invalid-ip")],
+            "state": {}
+        }
+
+        sent_messages = []
+
+        async def mock_receive():
+            return {"type": "http.request", "body": b"", "more_body": False}
+
+        async def mock_send(message):
+            sent_messages.append(message)
+
+        with patch("malti_telemetry.middleware.get_telemetry_system") as mock_get_system:
+            mock_system = Mock()
+            mock_batch_sender = Mock()
+            mock_batch_sender.should_ignore_status.return_value = False
+            mock_batch_sender.has_api_key.return_value = True
+            mock_batch_sender.use_ip_as_consumer = True  # Enabled
+            mock_batch_sender.ip_anonymize = False
+            mock_system.batch_sender = mock_batch_sender
+            mock_get_system.return_value = mock_system
+
+            await middleware(scope, mock_receive, mock_send)
+
+            # Verify fallback to anonymous when IP is invalid
+            mock_system.record_request.assert_called_once()
+            args = mock_system.record_request.call_args[1]
+            assert args["consumer"] == "anonymous"

@@ -532,3 +532,105 @@ class TestBatchSenderAsync:
 
         finally:
             del os.environ["MALTI_API_KEY"]
+
+
+class TestIPConfiguration:
+    """Test IP address configuration options"""
+
+    def test_batch_sender_ip_config_defaults(self):
+        """Test that IP configuration has correct defaults"""
+        sender = BatchSender()
+        
+        # Should have default values
+        assert sender.use_ip_as_consumer is False
+        assert sender.ip_anonymize is False
+
+    def test_batch_sender_ip_config_from_env_true(self):
+        """Test IP configuration from environment variables (enabled)"""
+        import os
+        
+        # Save original values
+        original_use_ip = os.environ.get('MALTI_USE_IP_AS_CONSUMER')
+        original_anonymize = os.environ.get('MALTI_IP_ANONYMIZE')
+        
+        try:
+            # Set environment variables
+            os.environ['MALTI_USE_IP_AS_CONSUMER'] = 'true'
+            os.environ['MALTI_IP_ANONYMIZE'] = 'true'
+            
+            sender = BatchSender()
+            
+            assert sender.use_ip_as_consumer is True
+            assert sender.ip_anonymize is True
+            
+        finally:
+            # Restore original values
+            if original_use_ip is not None:
+                os.environ['MALTI_USE_IP_AS_CONSUMER'] = original_use_ip
+            else:
+                os.environ.pop('MALTI_USE_IP_AS_CONSUMER', None)
+                
+            if original_anonymize is not None:
+                os.environ['MALTI_IP_ANONYMIZE'] = original_anonymize
+            else:
+                os.environ.pop('MALTI_IP_ANONYMIZE', None)
+
+    def test_batch_sender_ip_config_from_env_false(self):
+        """Test IP configuration from environment variables (disabled)"""
+        import os
+        
+        # Save original values
+        original_use_ip = os.environ.get('MALTI_USE_IP_AS_CONSUMER')
+        original_anonymize = os.environ.get('MALTI_IP_ANONYMIZE')
+        
+        try:
+            # Set environment variables to false
+            os.environ['MALTI_USE_IP_AS_CONSUMER'] = 'false'
+            os.environ['MALTI_IP_ANONYMIZE'] = 'false'
+            
+            sender = BatchSender()
+            
+            assert sender.use_ip_as_consumer is False
+            assert sender.ip_anonymize is False
+            
+        finally:
+            # Restore original values
+            if original_use_ip is not None:
+                os.environ['MALTI_USE_IP_AS_CONSUMER'] = original_use_ip
+            else:
+                os.environ.pop('MALTI_USE_IP_AS_CONSUMER', None)
+                
+            if original_anonymize is not None:
+                os.environ['MALTI_IP_ANONYMIZE'] = original_anonymize
+            else:
+                os.environ.pop('MALTI_IP_ANONYMIZE', None)
+
+    def test_batch_sender_ip_config_case_insensitive(self):
+        """Test that IP configuration is case insensitive"""
+        import os
+        
+        # Save original values
+        original_use_ip = os.environ.get('MALTI_USE_IP_AS_CONSUMER')
+        original_anonymize = os.environ.get('MALTI_IP_ANONYMIZE')
+        
+        try:
+            # Set environment variables with mixed case
+            os.environ['MALTI_USE_IP_AS_CONSUMER'] = 'TRUE'
+            os.environ['MALTI_IP_ANONYMIZE'] = 'True'
+            
+            sender = BatchSender()
+            
+            assert sender.use_ip_as_consumer is True
+            assert sender.ip_anonymize is True
+            
+        finally:
+            # Restore original values
+            if original_use_ip is not None:
+                os.environ['MALTI_USE_IP_AS_CONSUMER'] = original_use_ip
+            else:
+                os.environ.pop('MALTI_USE_IP_AS_CONSUMER', None)
+                
+            if original_anonymize is not None:
+                os.environ['MALTI_IP_ANONYMIZE'] = original_anonymize
+            else:
+                os.environ.pop('MALTI_IP_ANONYMIZE', None)

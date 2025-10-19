@@ -14,6 +14,7 @@ from starlette.requests import Request
 from starlette.routing import Router
 
 from .core import get_telemetry_system
+from .utils import extract_ip_from_forwarded_for, anonymize_ip
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +107,12 @@ class MaltiMiddleware:
                 # Extract context information
                 context = self._extract_context(request)
                 # Extract consumer information
-                consumer = self._extract_consumer(request)
+                batch_sender = telemetry_system.batch_sender
+                consumer = self._extract_consumer(
+                    request, 
+                    batch_sender.use_ip_as_consumer, 
+                    batch_sender.ip_anonymize
+                )
 
                 try:
                     # Record the request (thread-safe, non-blocking)
@@ -129,7 +135,12 @@ class MaltiMiddleware:
                     response_time = int((time.time() - start_time) * 1000)
                     endpoint = self._extract_route_pattern(request)
                     context = self._extract_context(request)
-                    consumer = self._extract_consumer(request)
+                    batch_sender = telemetry_system.batch_sender
+                    consumer = self._extract_consumer(
+                        request, 
+                        batch_sender.use_ip_as_consumer, 
+                        batch_sender.ip_anonymize
+                    )
 
                     # Record the request (thread-safe, non-blocking)
                     telemetry_system.record_request(
@@ -191,8 +202,8 @@ class MaltiMiddleware:
             return str(request.scope["state"]["malti_context"])
         return None
 
-    def _extract_consumer(self, request: Any) -> str:
-        """Extract consumer information from request headers"""
+    def _extract_consumer(self, request: Any, use_ip_as_consumer: bool = False, ip_anonymize: bool = False) -> str:
+        """Extract consumer information from request headers or IP address"""
         if not request:
             return "anonymous"
 
@@ -213,6 +224,25 @@ class MaltiMiddleware:
             return str(headers["consumer-id"])
         elif "user-id" in headers:
             return str(headers["user-id"])
+
+        # If no consumer headers found, try IP address extraction (if enabled)
+        if use_ip_as_consumer:
+            # Try to extract IP from X-Forwarded-For header
+            forwarded_for = headers.get("x-forwarded-for")
+            if forwarded_for:
+                ip = extract_ip_from_forwarded_for(forwarded_for)
+                if ip:
+                    # Apply anonymization if configured
+                    if ip_anonymize:
+                        ip = anonymize_ip(ip)
+                    return ip
+            
+            # Fallback to direct client IP if available
+            if hasattr(request, "client") and request.client and request.client.host:
+                ip = request.client.host
+                if ip_anonymize:
+                    ip = anonymize_ip(ip)
+                return ip
 
         return "anonymous"
 

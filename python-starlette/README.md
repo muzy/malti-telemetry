@@ -18,6 +18,7 @@ A Python library for collecting and sending telemetry data to Malti server using
 - 🛡️ **Retry Logic**: Exponential backoff for failed requests
 - 🎛️ **Configurable**: Extensive environment variable configuration
 - 🔧 **Framework Optimized**: Enhanced integrations for popular frameworks
+- 🌐 **IP Consumer Extraction**: Optional IP address extraction from X-Forwarded-For with anonymization
 
 ## Installation
 
@@ -116,6 +117,10 @@ export MALTI_API_KEY="your-api-key-here"
 export MALTI_SERVICE_NAME="my-fastapi-app"
 export MALTI_URL="https://your-malti-server.muzy.dev"
 export MALTI_NODE="production-node-1"
+
+# Optional: Enable IP address consumer extraction
+export MALTI_USE_IP_AS_CONSUMER=true
+export MALTI_IP_ANONYMIZE=true
 ```
 
 ## Configuration
@@ -137,6 +142,8 @@ export MALTI_NODE="production-node-1"
 | `MALTI_MAX_CONNECTIONS` | `10` | Max total connections |
 | `MALTI_OVERFLOW_THRESHOLD_PERCENT` | `90.0` | Buffer overflow threshold |
 | `MALTI_CLEAN_MODE` | `true` | Ignore 401/404 responses |
+| `MALTI_USE_IP_AS_CONSUMER` | `false` | Use IP address as consumer fallback |
+| `MALTI_IP_ANONYMIZE` | `false` | Anonymize IP addresses (simple octet masking) |
 
 ### Programmatic Configuration
 
@@ -149,7 +156,9 @@ configure_malti(
     malti_url="https://api.malti.muzy.dev",
     node="prod-web-01",
     batch_size=1000,
-    clean_mode=True
+    clean_mode=True,
+    use_ip_as_consumer=True,
+    ip_anonymize=True
 )
 ```
 
@@ -232,6 +241,28 @@ Malti automatically extracts consumer information from headers:
 2. `x-user-id` header 
 3. `consumer-id` header
 4. `user-id` header
+
+**IP Address as Consumer**: When no consumer headers are found, you can configure Malti to use IP addresses as a fallback:
+
+```python
+# Enable IP address extraction from X-Forwarded-For header
+configure_malti(
+    use_ip_as_consumer=True,
+    ip_anonymize=True  # Optional: anonymize IPs for privacy
+)
+
+# Or via environment variables
+export MALTI_USE_IP_AS_CONSUMER=true
+export MALTI_IP_ANONYMIZE=true
+```
+
+**IP Anonymization**: When enabled, IP addresses are anonymized using simple octet masking:
+- IPv4: `192.168.1.100` → `192.168.1.xxx`
+- IPv6: `2001:db8:85a3:8d3:1319:8a2e:370:7348` → `2001:db8:85a3:8d3:xxxx:xxxx:xxxx:xxxx`
+
+**IP Extraction Priority**:
+1. X-Forwarded-For header (uses first/leftmost IP)
+2. Direct client IP (fallback)
 
 **Custom Consumer Extraction**: Set consumer information in your framework:
 

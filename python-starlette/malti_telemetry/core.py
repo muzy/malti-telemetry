@@ -137,6 +137,12 @@ class BatchSender:
         clean_mode_env = os.getenv("MALTI_CLEAN_MODE", "true")
         self.clean_mode = clean_mode_env.lower() == "true"
 
+        # IP address consumer configuration
+        use_ip_env = os.getenv("MALTI_USE_IP_AS_CONSUMER", "false")
+        self.use_ip_as_consumer = use_ip_env.lower() == "true"
+        anonymize_ip_env = os.getenv("MALTI_IP_ANONYMIZE", "false")
+        self.ip_anonymize = anonymize_ip_env.lower() == "true"
+
         # Internal state
         self.buffer = TelemetryBuffer(max_size=25000)
         self.running = False
